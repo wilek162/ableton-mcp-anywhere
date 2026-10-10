@@ -24,19 +24,19 @@ uv tool install --from . ableton-mcp-anywhere
 Or run it without installing:
 
 ```bash
-uvx --from . ableton-mcp <command>
+uvx --from . ableton-anywhere <command>
 ```
 
 ## 60-second setup
 
 ```bash
-ableton-mcp setup      # install the Remote Script into the detected User Library
-ableton-mcp doctor     # confirm the bridge is healthy
+ableton-anywhere setup      # install the Remote Script into the detected User Library
+ableton-anywhere doctor     # confirm the bridge is healthy
 ```
 
 Then in Ableton Live: **Settings > Tempo & MIDI > MIDI > Control Surface > AbletonMCP**,
 with **Input: None** and **Output: None**. Restart Live after installing the script.
-(On Windows you can also run `ableton-mcp.cmd setup`.)
+(On Windows you can also run `ableton-anywhere.cmd setup`.)
 
 > `setup` and `doctor` are the only steps that touch Live. Every other command is a
 > normal MCP server launch, so your client config is a single line.
@@ -44,8 +44,8 @@ with **Input: None** and **Output: None**. Restart Live after installing the scr
 ## Connect your client
 
 ```bash
-ableton-mcp config <client>          # print the snippet
-ableton-mcp config <client> --write  # write it into the config file (JSON clients)
+ableton-anywhere config <client>          # print the snippet
+ableton-anywhere config <client> --write  # write it into the config file (JSON clients)
 ```
 
 Clients: `claude-desktop`, `cursor`, `windsurf`, `cline`, `continue`, `codex`,
@@ -81,13 +81,13 @@ claude mcp add --transport stdio ableton -- uvx mcp-server-ableton-live@1.8.1
 The same tools are available straight from the shell:
 
 ```bash
-ableton-mcp tools                        # list all tools + one-line summaries
-ableton-mcp call get_session_info        # read the running Live set
-ableton-mcp call set_tempo tempo=128     # invoke a tool with arguments
-ableton-mcp call create_midi_track --file args.json
-ableton-mcp schema --format openai       # export OpenAI function-calling schema
-ableton-mcp schema --format anthropic    # export Anthropic tool schema
-ableton-mcp system-prompt                # ready-made system prompt for your agent
+ableton-anywhere tools                        # list all tools + one-line summaries
+ableton-anywhere call get_session_info        # read the running Live set
+ableton-anywhere call set_tempo tempo=128     # invoke a tool with arguments
+ableton-anywhere call create_midi_track --file args.json
+ableton-anywhere schema --format openai       # export OpenAI function-calling schema
+ableton-anywhere schema --format anthropic    # export Anthropic tool schema
+ableton-anywhere system-prompt                # ready-made system prompt for your agent
 ```
 
 This is how agents with no native MCP support (custom scripts, local LLMs, notebooks)
@@ -99,9 +99,9 @@ Some hosts want a URL rather than a launched process:
 
 ```bash
 uv tool install --from '.[http]' ableton-mcp-anywhere
-ableton-mcp serve --transport streamable-http --port 8000
+ableton-anywhere serve --transport streamable-http --port 8000
 # Streamable HTTP endpoint:  http://127.0.0.1:8000/mcp
-# SSE transport:            ableton-mcp serve --transport sse --port 8000   -> /sse
+# SSE transport:            ableton-anywhere serve --transport sse --port 8000   -> /sse
 ```
 
 It binds to loopback only and keeps DNS-rebinding protection on. Do not expose it to
@@ -123,7 +123,7 @@ a network: the server has full control of your Live set and no authentication.
 
 ## Troubleshooting
 
-- **User Library not found** — pass it explicitly: `ableton-mcp setup --user-library "E:\Documents\ABLETON\User Library"`,
+- **User Library not found** — pass it explicitly: `ableton-anywhere setup --user-library "E:\Documents\ABLETON\User Library"`,
   or set `ABLETON_USER_LIBRARY`.
 - **`AbletonMCP` missing from the Control Surface list** — the folder must be named exactly
   `AbletonMCP`, and Live only scans scripts at startup, so restart it.

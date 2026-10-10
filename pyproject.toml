@@ -1,6 +1,6 @@
 [project]
 name = "ableton-mcp-anywhere"
-version = "1.0.0"
+version = "1.0.1"
 description = "Universal launcher for the Ableton Live MCP server: works with any agent, client, IDE or CLI."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -15,7 +15,7 @@ http = ["uvicorn>=0.30"]
 dev = ["pytest>=8", "pytest-asyncio>=0.23"]
 
 [project.scripts]
-ableton-mcp = "ableton_anywhere.cli:main"
+ableton-anywhere = "ableton_anywhere.cli:main"
 
 [build-system]
 requires = ["hatchling"]

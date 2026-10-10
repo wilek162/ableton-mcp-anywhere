@@ -28,19 +28,19 @@ jobs:
         run: |
           uv venv /tmp/abenbox
           uv pip install --python /tmp/abenbox/bin/python "$(ls dist/*.whl)"
-          /tmp/abenbox/bin/ableton-mcp --version
+          /tmp/abenbox/bin/ableton-anywhere --version
 
       - name: "CLI: tools / schema / config work without Live"
         run: |
-          /tmp/abenbox/bin/ableton-mcp tools | tail -n 1
-          /tmp/abenbox/bin/ableton-mcp schema --format openai | head -n 3
-          /tmp/abenbox/bin/ableton-mcp config cursor
+          /tmp/abenbox/bin/ableton-anywhere tools | tail -n 1
+          /tmp/abenbox/bin/ableton-anywhere schema --format openai | head -n 3
+          /tmp/abenbox/bin/ableton-anywhere config cursor
           echo "--- codex ---"
-          /tmp/abenbox/bin/ableton-mcp config codex
+          /tmp/abenbox/bin/ableton-anywhere config codex
 
       - name: doctor fails gracefully with no Live (non-zero + message)
         run: |
-          if /tmp/abenbox/bin/ableton-mcp doctor --json; then
+          if /tmp/abenbox/bin/ableton-anywhere doctor --json; then
             echo "doctor unexpectedly succeeded with no Live" >&2; exit 1
           else
             echo "OK: doctor exited non-zero as expected"
@@ -55,7 +55,7 @@ jobs:
 
           async def main():
               params = StdioServerParameters(
-                  command="/tmp/abenbox/bin/ableton-mcp", args=["serve"]
+                  command="/tmp/abenbox/bin/ableton-anywhere", args=["serve"]
               )
               async with stdio_client(params) as (r, w):
                   async with ClientSession(r, w) as s:
@@ -71,7 +71,7 @@ jobs:
 
       - name: streamable-http handshake
         run: |
-          /tmp/abenbox/bin/ableton-mcp serve --transport streamable-http --port 8799 &
+          /tmp/abenbox/bin/ableton-anywhere serve --transport streamable-http --port 8799 &
           SRV=$!
           sleep 6
           uv run --with httpx python - <<'PY'

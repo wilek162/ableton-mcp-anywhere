@@ -87,7 +87,7 @@ def _cmd_tools(args) -> int:
         return 0
     for tool in tools:
         print(f"{tool['name']}: {tool['summary']}")
-    print(f"\n{len(tools)} tools. Use `ableton-mcp call <tool> key=value ...` to invoke one.")
+    print(f"\n{len(tools)} tools. Use `ableton-anywhere call <tool> key=value ...` to invoke one.")
     return 0
 
 
@@ -124,7 +124,7 @@ def _cmd_system_prompt(_args) -> int:
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        prog="ableton-mcp",
+        prog="ableton-anywhere",
         description="Universal Ableton Live MCP server launcher (works with any agent/client).",
     )
     parser.add_argument("--version", "-V", action="version", version=f"ableton-mcp-anywhere {__version__}")
