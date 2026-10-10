@@ -29,17 +29,42 @@ async def list_tools() -> list[dict[str, Any]]:
     return result
 
 
+def _friendly_error(name: str, exc: BaseException) -> str:
+    """Turn a tool failure into an actionable message instead of a traceback."""
+    text = (str(exc) or "").strip()
+    etype = type(exc).__name__
+    low = text.lower()
+    connection_types = {
+        "AbletonNotConnectedError",
+        "AbletonTimeoutError",
+        "AbletonConnectionLostError",
+    }
+    if etype in connection_types or "not connected" in low or "connection" in low:
+        return (
+            f"Could not reach Ableton Live while running '{name}'.\n"
+            "Check that Live is open and 'AbletonMCP' is selected as a Control Surface\n"
+            "(Settings > Tempo & MIDI > MIDI, Input/Output None), then run:\n"
+            "  ableton-anywhere doctor"
+        )
+    if "unknown tool" in low:
+        return f"Unknown tool '{name}'. Run `ableton-anywhere tools` to list them."
+    return f"{name} failed ({etype}): {text or 'no details'}"
+
+
 async def call_tool(name: str, arguments: dict[str, Any] | None = None) -> tuple[str, bool]:
-    """Invoke one tool. Returns (text, is_error)."""
+    """Invoke one tool. Returns (text, is_error).
+
+    The MCP SDK raises on failure (unknown tool, Live not connected, timeout),
+    so we catch it and surface a clean, actionable message with is_error=True so
+    the CLI exits non-zero instead of dumping a traceback.
+    """
     mcp = load_app()
-    blocks = await mcp.call_tool(name, arguments or {})
-    if isinstance(blocks, tuple):
-        content = blocks[0]
-    else:  # pragma: no cover - older SDKs returned just the content list
-        content = blocks
-    chunks = []
-    for block in content:
-        chunks.append(block.text if hasattr(block, "text") else json.dumps(block))
+    try:
+        result = await mcp.call_tool(name, arguments or {})
+    except Exception as exc:  # noqa: BLE001 - convert any tool failure to a message
+        return _friendly_error(name, exc), True
+    content = result[0] if isinstance(result, tuple) else result
+    chunks = [block.text if hasattr(block, "text") else json.dumps(block) for block in content]
     return "\n".join(chunks), False
 
 

@@ -16,6 +16,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import json
+import os
 import sys
 
 from . import __version__
@@ -32,13 +33,45 @@ def _cmd_setup(args) -> int:
         print(f"setup failed: {exc}", file=sys.stderr)
         return 1
     print(f"User Library: {resolved.path}  ({resolved.origin})")
-    code = upstream.install(user_library=str(resolved.path), replace=args.replace)
-    if code == 0:
-        print(
-            "\nNext: restart Ableton Live, then in Settings > Tempo & MIDI > MIDI pick "
-            "'AbletonMCP' as a Control Surface with Input/Output set to None."
-        )
-    return code
+
+    def _do_install(replace: bool) -> int:
+        code = upstream.install(user_library=str(resolved.path), replace=replace)
+        if code == 0:
+            print(
+                "\nNext: restart Ableton Live, then in Settings > Tempo & MIDI > MIDI pick "
+                "'AbletonMCP' as a Control Surface with Input/Output set to None."
+            )
+        return code
+
+    try:
+        return _do_install(args.replace)
+    except ValueError as exc:
+        # Most often: a Remote Script from a *different* Ableton MCP tool is
+        # already installed. Coexist safely instead of crashing or clobbering.
+        print(f"\n{exc}")
+        if getattr(args, "yes", False) or not sys.stdin.isatty():
+            print(
+                "\nRefusing to overwrite another tool's script. Re-run with --replace to\n"
+                "back it up and switch to ableton-mcp-anywhere, or remove the other\n"
+                "AbletonMCP Control Surface in Live first.",
+                file=sys.stderr,
+            )
+            return 1
+        answer = input(
+            "\nReplace it with ableton-mcp-anywhere's script? "
+            "(the existing script is backed up automatically) [y/N] "
+        ).strip().lower()
+        if answer not in ("y", "yes"):
+            print("Aborted. Nothing was changed.")
+            return 1
+        try:
+            return _do_install(True)
+        except (OSError, ValueError) as exc2:
+            print(f"setup failed: {exc2}", file=sys.stderr)
+            return 1
+    except OSError as exc:
+        print(f"setup failed: {exc}", file=sys.stderr)
+        return 1
 
 
 def _cmd_uninstall(args) -> int:
@@ -136,6 +169,7 @@ def build_parser() -> argparse.ArgumentParser:
         if name == "setup":
             p.set_defaults(func=_cmd_setup)
             p.add_argument("--replace", action="store_true", help="Replace a different existing script")
+            p.add_argument("-y", "--yes", action="store_true", help="Never prompt; safe defaults (for scripts/CI)")
         else:
             p.set_defaults(func=_cmd_doctor)
             p.add_argument("--json", action="store_true", help="Emit the report as JSON")
@@ -183,7 +217,12 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     try:
         return args.func(args)
-    except (FileNotFoundError, ValueError) as exc:
+    except KeyboardInterrupt:
+        print("\nInterrupted.", file=sys.stderr)
+        return 130
+    except Exception as exc:  # noqa: BLE001 - clean CLI errors, traceback only when debugging
+        if os.environ.get("ABLETON_ANYWHERE_DEBUG"):
+            raise
         print(f"error: {exc}", file=sys.stderr)
         return 1
 

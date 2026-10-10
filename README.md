@@ -5,40 +5,56 @@ Windsurf, Cline, Continue, VS Code, Gemini CLI, Codex, Claude Code, or a plain
 shell. No IDE required.
 
 It wraps [`wstierhout/ableton-live-mcp`](https://github.com/wstierhout/ableton-live-mcp)
-(156 typed tools, tested on Live 12) and adds the two things every setup trips over:
+(156 typed tools, tested on Live 12) and makes it work **everywhere**:
 
-1. **User Library auto-detection.** The stock installer only looks in
-   `Documents/Ableton/User Library`. This reads Live's own `Library.cfg` to find a
-   relocated library, so `setup` just works.
-2. **Client config for every host.** `config <client>` prints ready-to-paste JSON/TOML,
-   or writes it for you.
+1. **Any client.** One `config <client>` prints or writes MCP config for Claude
+   Desktop, Cursor, Windsurf, Cline, Continue, VS Code, Gemini CLI, Codex, Claude Code.
+2. **Any agent — even without MCP.** `tools` + `call` drive Live straight from a shell;
+   `schema`/`system-prompt` feed function-calling agents.
+3. **Setup that just works.** Auto-detects a relocated User Library (reads Live's
+   `Library.cfg`), and coexists safely with other Ableton MCP tools.
 
 > Requires Ableton Live 11/12, Python 3.10+, and [`uv`](https://docs.astral.sh/uv/).
 
 ## Install
 
-From PyPI (live once the first release is published — see *Releasing* below):
+Get the `ableton-anywhere` command onto your machine.
+
+**Windows (PowerShell) — one line:**
+
+```powershell
+powershell -c "irm https://raw.githubusercontent.com/wilek162/ableton-mcp-anywhere/main/install.ps1 | iex"
+```
+
+**macOS / Linux:**
 
 ```bash
 uv tool install ableton-mcp-anywhere
-ableton-anywhere --version
 ```
 
-One-shot, without installing:
-
-```bash
-uvx --from ableton-mcp-anywhere ableton-anywhere --help
-```
-
-From source (this repo):
+**From source (this repo):**
 
 ```bash
 uv tool install --from . '.[http]'   # [http] adds the server transports
-# or
-uvx --from . ableton-anywhere --help
 ```
 
-On Windows you can also run `ableton-anywhere.cmd setup`.
+Verify it works:
+
+```bash
+ableton-anywhere --version
+```
+
+> On Windows you can also invoke `ableton-anywhere.cmd` from the repo, or just
+> `ableton-anywhere` once it's on your PATH.
+
+## Try it without installing
+
+Run a single command straight from the package — nothing is installed to disk:
+
+```bash
+uvx --from ableton-mcp-anywhere ableton-anywhere doctor
+uvx --from ableton-mcp-anywhere ableton-anywhere tools
+```
 
 ## 60-second setup
 
@@ -49,10 +65,12 @@ ableton-anywhere doctor     # confirm the bridge is healthy
 
 Then in Ableton Live: **Settings > Tempo & MIDI > MIDI > Control Surface > AbletonMCP**,
 with **Input: None** and **Output: None**. Restart Live after installing the script.
-(On Windows you can also run `ableton-anywhere.cmd setup`.)
 
 > `setup` and `doctor` are the only steps that touch Live. Every other command is a
-> normal MCP server launch, so your client config is a single line.
+> normal MCP server launch, so your client config is a single line. If another Ableton
+> MCP tool already installed its Remote Script, `setup` detects it, explains the
+> conflict, and asks before replacing (it backs up the old one) — pass `--yes` to
+> skip the prompt in scripts.
 
 ## Connect your client
 
@@ -124,7 +142,7 @@ a network: the server has full control of your Live set and no authentication.
 
 | Command | What it does |
 | --- | --- |
-| `setup [--user-library PATH] [--replace]` | Install the Remote Script (auto-detects the library) |
+| `setup [--user-library PATH] [--replace] [-y]` | Install the Remote Script (auto-detects the library; prompts on conflict) |
 | `uninstall [--user-library PATH]` | Remove the Remote Script (backs it up) |
 | `doctor [--json]` | Check install + Live bridge, exit non-zero on failure |
 | `serve [--transport stdio|streamable-http|sse]` | Run the server |
@@ -156,15 +174,24 @@ the same clean-room checks automatically on every push — no Codespace needed.
 
 ## Troubleshooting
 
+- **Another Ableton MCP tool is already installed** — `ableton-anywhere` uses its own
+  command name and won't clobber other tools. The Remote Script lives in a shared
+  `AbletonMCP` folder, so `setup` detects a different script, explains it, and asks
+  before replacing (the old one is backed up). Use `--yes` to skip the prompt, or keep
+  both tools and only enable one `AbletonMCP` Control Surface in Live at a time.
+- **A tool call says it can't reach Ableton** — open Live, select `AbletonMCP` as a
+  Control Surface (Settings > Tempo & MIDI > MIDI, Input/Output None), then run
+  `ableton-anywhere doctor`. A failed `call` now exits non-zero with this guidance.
 - **User Library not found** — pass it explicitly: `ableton-anywhere setup --user-library "E:\Documents\ABLETON\User Library"`,
   or set `ABLETON_USER_LIBRARY`.
 - **`AbletonMCP` missing from the Control Surface list** — the folder must be named exactly
   `AbletonMCP`, and Live only scans scripts at startup, so restart it.
 - **Every call times out** — a modal dialog is open in Live (e.g. the trial nag) and it
   freezes the Remote Script. Dismiss it and retry.
-- **Port 9877 refused** — Live isn't running or the Control Surface isn't selected.
-- **Two bridges on one port** — don't enable two Ableton MCP Control Surfaces at once;
-  run `setup --replace` if you're switching servers.
+- **Port 9877 refused** — Live isn't running or the Control Surface isn't selected. If
+  another program uses 9877, set `ABLETON_MCP_PORT` for Live and `ABLETON_PORT` for the
+  server to a matching free port.
+- **Want a full traceback instead of a clean error?** — set `ABLETON_ANYWHERE_DEBUG=1`.
 
 ## Releasing (maintainers)
 
