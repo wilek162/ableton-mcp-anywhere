@@ -138,6 +138,28 @@ ableton-anywhere serve --transport streamable-http --port 8000
 It binds to loopback only and keeps DNS-rebinding protection on. Do not expose it to
 a network: the server has full control of your Live set and no authentication.
 
+## Web GUI
+
+A local dashboard — no IDE, no MCP client, just a browser. See your Live session
+live, watch every action the agent takes, and drive tools yourself:
+
+```bash
+uv tool install 'ableton-mcp-anywhere[http]'   # one-time: adds the GUI deps
+ableton-anywhere gui                            # then open the printed URL
+# → http://127.0.0.1:8765
+```
+
+- **Session view** — tracks, type, volume, clips, devices, tempo, transport (auto-refresh).
+- **Activity stream** — every tool call is journalled with its arguments, result, and a
+  before/after state snapshot, so the agent's work is **visible and replayable** instead
+  of a black box. Click any entry to expand it.
+- **Tool runner** — pick any of the 156 tools, fill in JSON arguments, run it, see the
+  result. Quick-action buttons for common moves (start/stop, tempo, new track, drums).
+
+It runs on loopback only with no auth (same trust model as the Remote Script). The
+journal is the foundation for the upcoming dry-run/approve, `watch`, and `replay`
+commands.
+
 ## Commands
 
 | Command | What it does |
@@ -146,6 +168,7 @@ a network: the server has full control of your Live set and no authentication.
 | `uninstall [--user-library PATH]` | Remove the Remote Script (backs it up) |
 | `doctor [--json]` | Check install + Live bridge, exit non-zero on failure |
 | `serve [--transport stdio|streamable-http|sse]` | Run the server |
+| `gui [--host H] [--port P]` | Open the local web GUI (session view, activity stream, tool runner) |
 | `config <client> [--write] [--key NAME]` | Print or write client config |
 | `tools [--json]` | List tools for shell/agent use |
 | `call <tool> [k=v ...] [--json J] [--file F]` | Invoke a tool |

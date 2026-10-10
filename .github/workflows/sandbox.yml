@@ -27,7 +27,7 @@ jobs:
       - name: Install into a fresh venv (as a user would)
         run: |
           uv venv /tmp/abenbox
-          uv pip install --python /tmp/abenbox/bin/python "$(ls dist/*.whl)"
+          uv pip install --python /tmp/abenbox/bin/python "$(ls dist/*.whl)[http]"
           /tmp/abenbox/bin/ableton-anywhere --version
 
       - name: "CLI: tools / schema / config work without Live"
@@ -86,5 +86,27 @@ jobs:
           assert r.status_code in (200, 202), (r.status_code, r.text)
           assert r.headers.get("mcp-session-id")
           print("http OK:", r.status_code)
+          PY
+          kill $SRV
+
+      - name: web GUI serves and answers (no Live)
+        run: |
+          /tmp/abenbox/bin/ableton-anywhere gui --port 8791 &
+          SRV=$!
+          sleep 6
+          uv run --with httpx python - <<'PY'
+          import httpx
+          b = "http://127.0.0.1:8791"
+          home = httpx.get(b + "/", timeout=15).text
+          assert "Ableton Anywhere" in home, "index.html not served"
+          tools = httpx.get(b + "/api/tools", timeout=15).json()
+          assert any(t["name"] == "set_tempo" for t in tools), "tools missing"
+          sess = httpx.get(b + "/api/session", timeout=15).json()
+          assert "connected" in sess, "session shape wrong"
+          bad = httpx.post(b + "/api/call", json={"tool": "no_such_tool_xyz", "arguments": {}}, timeout=15)
+          assert bad.json()["ok"] is False, "bad tool should report ok=False"
+          act = httpx.get(b + "/api/activity", timeout=15).json()
+          assert any(a["tool"] == "no_such_tool_xyz" for a in act), "journal not recorded"
+          print("GUI smoke OK")
           PY
           kill $SRV

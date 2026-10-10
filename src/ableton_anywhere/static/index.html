@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ableton Anywhere</title>
+<style>
+  :root{--bg:#0e0f13;--panel:#171922;--panel2:#1e2130;--line:#2a2e3d;--text:#e6e8ef;--muted:#9aa3b7;--accent:#7c5cff;--ok:#3ddc84;--err:#ff5d5d}
+  *{box-sizing:border-box}
+  body{margin:0;font:14px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--text)}
+  header{display:flex;align-items:center;gap:12px;padding:12px 18px;background:linear-gradient(90deg,#1a1430,#12131a);border-bottom:1px solid var(--line);flex-wrap:wrap}
+  header h1{font-size:16px;margin:0;letter-spacing:.3px}
+  .dot{width:10px;height:10px;border-radius:50%;background:var(--err);box-shadow:0 0 8px var(--err)}
+  .dot.on{background:var(--ok);box-shadow:0 0 8px var(--ok)}
+  .chip{background:var(--panel2);border:1px solid var(--line);border-radius:999px;padding:3px 10px;color:var(--muted);font-size:12px}
+  .chip b{color:var(--text)}
+  main{display:grid;grid-template-columns:1.3fr 1fr;gap:14px;padding:14px;height:calc(100vh - 53px)}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;display:flex;flex-direction:column;min-height:0;overflow:hidden}
+  .panel h2{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:0;padding:10px 14px;border-bottom:1px solid var(--line)}
+  .body{padding:10px 14px;overflow:auto;flex:1}
+  .kv{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line)}
+  th{color:var(--muted);font-weight:600;font-size:11px;text-transform:uppercase}
+  .tname{font-weight:600}
+  .tag{font-size:11px;padding:1px 7px;border-radius:6px;background:var(--panel2);color:var(--muted)}
+  .acts{display:flex;flex-direction:column;gap:6px}
+  .act{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:7px 10px;cursor:pointer}
+  .act .row{display:flex;justify-content:space-between;gap:8px;align-items:center}
+  .act .tool{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px}
+  .badge{font-size:10px;padding:1px 7px;border-radius:6px}
+  .badge.ok{background:rgba(61,220,132,.15);color:var(--ok)}
+  .badge.err{background:rgba(255,93,93,.15);color:var(--err)}
+  .act pre{display:none;margin:6px 0 0;white-space:pre-wrap;word-break:break-word;font-size:11px;color:var(--muted);max-height:200px;overflow:auto}
+  .act.open pre{display:block}
+  .ts{color:var(--muted);font-size:11px}
+  .run{display:flex;gap:8px;padding:10px 14px;border-top:1px solid var(--line);flex-wrap:wrap}
+  select,textarea,button{background:var(--panel2);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:7px 9px;font:13px ui-monospace,Menlo,Consolas,monospace}
+  textarea{flex:1;min-width:160px;min-height:38px;resize:vertical}
+  button{background:var(--accent);border-color:var(--accent);color:#fff;cursor:pointer;font-weight:600}
+  button.ghost{background:var(--panel2);border-color:var(--line);color:var(--text);font-weight:500}
+  button:hover{filter:brightness(1.08)}
+  .quick{display:flex;gap:6px;flex-wrap:wrap;padding:0 14px 10px}
+  .quick button{font-size:11px;padding:4px 9px;font-family:inherit}
+  #result{margin:0 14px 12px;padding:8px 10px;background:#0a0b0f;border:1px solid var(--line);border-radius:8px;font-size:12px;white-space:pre-wrap;max-height:200px;overflow:auto;display:none}
+  .banner{margin:0 0 10px;padding:8px 10px;border-radius:8px;font-size:12px;background:rgba(255,93,93,.12);color:var(--err);border:1px solid rgba(255,93,93,.3);display:none}
+  .muted{color:var(--muted)}
+</style>
+</head>
+<body>
+<header>
+  <span id="dot" class="dot"></span>
+  <h1>Ableton Anywhere</h1>
+  <span class="chip" id="livever">Live —</span>
+  <span class="chip">Tempo <b id="tempo">—</b></span>
+  <span class="chip" id="transport">stopped</span>
+  <span class="chip">Tracks <b id="tracks">—</b></span>
+  <span style="flex:1"></span>
+  <span class="chip muted" id="clock">—</span>
+</header>
+<main>
+  <section class="panel">
+    <h2>Session</h2>
+    <div class="body">
+      <div id="banner" class="banner"></div>
+      <div class="kv">
+        <span class="chip">Time sig <b id="sig">—</b></span>
+        <span class="chip">Scenes <b id="scenes">—</b></span>
+        <span class="chip">Returns <b id="returns">—</b></span>
+      </div>
+      <table>
+        <thead><tr><th>#</th><th>Track</th><th>Type</th><th>Vol</th><th>Clips</th><th>Devices</th></tr></thead>
+        <tbody id="tracks-body"><tr><td colspan="6" class="muted">Waiting for Live…</td></tr></tbody>
+      </table>
+    </div>
+  </section>
+  <section class="panel">
+    <h2>Activity <span class="muted" style="float:right;text-transform:none">what the agent does</span></h2>
+    <div class="body"><div id="acts" class="acts"><div class="muted">No actions yet.</div></div></div>
+    <div class="quick" id="quick"></div>
+    <div class="run">
+      <select id="tool"></select>
+      <textarea id="args" spellcheck="false">{}</textarea>
+      <button id="run">Run</button>
+    </div>
+    <pre id="result"></pre>
+  </section>
+</main>
+<script>
+const $ = id => document.getElementById(id);
+const esc = s => String(s==null?'':s).replace(/[&<>]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+let TOOLS = [];
+
+async function refresh(){
+  try{
+    const r = await fetch('/api/session'); const d = await r.json();
+    const on = d.connected;
+    $('dot').classList.toggle('on', on);
+    const b = $('banner');
+    if(!on){ b.style.display='block'; b.textContent = 'Not connected to Live: ' + (d.error||'unknown'); }
+    else{ b.style.display='none'; }
+    if(on && d.session){
+      const s = d.session;
+      $('tempo').textContent = (s.tempo!=null? Math.round(s.tempo*100)/100 : '—');
+      $('livever').textContent = 'Live ' + (s.live_version||'—');
+      $('tracks').textContent = s.track_count!=null? s.track_count : '—';
+      $('scenes').textContent = s.scene_count!=null? s.scene_count : '—';
+      $('sig').textContent = (s.time_signature)||((s.signature_numerator||4)+'/'+(s.signature_denominator||4));
+      $('returns').textContent = s.return_track_count!=null? s.return_track_count : (s.return_tracks? s.return_tracks.length : '—');
+      const t = $('transport'); t.textContent = s.is_playing? 'playing' : 'stopped';
+      t.style.color = s.is_playing? 'var(--ok)':'var(--muted)';
+      const rows = (s.tracks||[]).map(tr =>
+        '<tr><td class="muted">'+tr.index+'</td><td class="tname">'+esc(tr.name)+'</td>'+
+        '<td><span class="tag">'+esc(tr.type)+'</span></td>'+
+        '<td>'+(tr.volume!=null? Math.round(tr.volume*100)/100 : '—')+'</td>'+
+        '<td>'+(tr.clips!=null? tr.clips : '—')+'</td>'+
+        '<td class="muted">'+((tr.devices||[]).length)+'</td></tr>').join('');
+      $('tracks-body').innerHTML = rows || '<tr><td colspan="6" class="muted">No tracks.</td></tr>';
+    }
+  }catch(e){ $('dot').classList.remove('on'); }
+  loadActivity();
+}
+
+async function loadTools(){
+  const r = await fetch('/api/tools'); TOOLS = await r.json();
+  $('tool').innerHTML = TOOLS.map(t=>'<option value="'+esc(t.name)+'">'+esc(t.name)+'</option>').join('');
+  const quickDefs = [
+    ['Get session','get_session_info',{}],
+    ['Start','start_playback',{}],
+    ['Stop','stop_playback',{}],
+    ['Tempo 120','set_tempo',{tempo:120}],
+    ['Tempo 128','set_tempo',{tempo:128}],
+    ['New MIDI track','create_midi_track',{}],
+    ['Drums 4-bar','generate_drum_pattern',{bars:4}]
+  ];
+  $('quick').innerHTML = quickDefs.map((q,i)=>
+    '<button class="ghost" data-i="'+i+'">'+esc(q[0])+'</button>').join('');
+  $('quick').querySelectorAll('button').forEach(b=>{
+    b.onclick = ()=>{ const d = quickDefs[+b.dataset.i];
+      $('tool').value = d[1]; $('args').value = JSON.stringify(d[2]); runTool(); };
+  });
+}
+
+async function loadActivity(){
+  const r = await fetch('/api/activity'); const list = await r.json();
+  const box = $('acts');
+  if(!list.length){ box.innerHTML = '<div class="muted">No actions yet.</div>'; return; }
+  box.innerHTML = list.slice().reverse().map((e)=>{
+    const time = new Date(e.ts*1000).toLocaleTimeString();
+    const detail = esc(JSON.stringify(e.arguments)) +
+      (e.state_after? '\nstate: '+esc(JSON.stringify(e.state_after)) : '') +
+      (e.result? '\n'+esc(e.result) : '') + (e.error? '\n'+esc(e.error):'');
+    return '<div class="act"><div class="row">'+
+      '<span class="tool">'+esc(e.tool)+'</span>'+
+      '<span><span class="ts">'+time+'</span> <span class="badge '+(e.ok?'ok':'err')+'">'+(e.ok?'ok':'err')+'</span></span>'+
+      '</div><pre>'+detail+'</pre></div>';
+  }).join('');
+  box.querySelectorAll('.act').forEach(el=>{ el.onclick = ()=> el.classList.toggle('open'); });
+}
+
+async function runTool(){
+  const tool = $('tool').value;
+  let args = {};
+  const raw = $('args').value.trim();
+  if(raw){ try{ args = JSON.parse(raw); }catch(e){ showResult('Arguments must be valid JSON: '+e.message, true); return; } }
+  const r = await fetch('/api/call',{method:'POST',headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({tool, arguments: args})});
+  const d = await r.json();
+  showResult(d.text || d.error || '(no output)', !d.ok);
+  loadActivity();
+}
+function showResult(text, isErr){
+  const el = $('result'); el.style.display='block';
+  el.style.color = isErr? 'var(--err)':'var(--text)'; el.textContent = text;
+}
+
+$('run').onclick = runTool;
+$('args').addEventListener('keydown', e=>{ if(e.key==='Enter' && (e.metaKey||e.ctrlKey)) runTool(); });
+setInterval(()=>{ $('clock').textContent = new Date().toLocaleTimeString(); }, 1000);
+loadTools(); refresh(); setInterval(refresh, 1500);
+</script>
+</body>
+</html>
+

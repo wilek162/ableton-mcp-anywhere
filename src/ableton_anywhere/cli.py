@@ -109,6 +109,19 @@ def _cmd_config(args) -> int:
     return 0
 
 
+def _cmd_gui(args) -> int:
+    from . import webgui
+
+    try:
+        webgui.run(host=args.host, port=args.port)
+    except ImportError as exc:
+        print("The web GUI needs its server extras. Install with:", file=sys.stderr)
+        print("  uv tool install 'ableton-mcp-anywhere[http]'", file=sys.stderr)
+        print(f"  (missing dependency: {exc})", file=sys.stderr)
+        return 1
+    return 0
+
+
 async def _list_tools() -> list[dict]:
     return await bridge.list_tools()
 
@@ -190,6 +203,11 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--write", action="store_true", help="Merge into the client config file")
     p.add_argument("--key", default=configs.SERVER_KEY, help="Server name in the config")
     p.set_defaults(func=_cmd_config)
+
+    p = sub.add_parser("gui", help="Open the local web GUI (session view, activity, tool runner)")
+    p.add_argument("--host", default="127.0.0.1")
+    p.add_argument("--port", type=int, default=8765)
+    p.set_defaults(func=_cmd_gui)
 
     p = sub.add_parser("tools", help="List available tools")
     p.add_argument("--json", action="store_true")
