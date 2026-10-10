@@ -1,0 +1,90 @@
+name: Sandbox verify
+
+# A clean-room check that the tool works as a *distributed* package on a
+# machine with no Ableton Live. This doubles as a Codespaces-like sandbox:
+# it builds and installs the wheel, then drives the CLI exactly as a user or
+# agent would, and confirms the server starts and answers on stdio and HTTP.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: "pyproject.toml"
+
+      - name: Build the wheel
+        run: uv build
+
+      - name: Install into a fresh venv (as a user would)
+        run: |
+          uv venv /tmp/abenbox
+          uv pip install --python /tmp/abenbox/bin/python "$(ls dist/*.whl)"
+          /tmp/abenbox/bin/ableton-mcp --version
+
+      - name: "CLI: tools / schema / config work without Live"
+        run: |
+          /tmp/abenbox/bin/ableton-mcp tools | tail -n 1
+          /tmp/abenbox/bin/ableton-mcp schema --format openai | head -n 3
+          /tmp/abenbox/bin/ableton-mcp config cursor
+          echo "--- codex ---"
+          /tmp/abenbox/bin/ableton-mcp config codex
+
+      - name: doctor fails gracefully with no Live (non-zero + message)
+        run: |
+          if /tmp/abenbox/bin/ableton-mcp doctor --json; then
+            echo "doctor unexpectedly succeeded with no Live" >&2; exit 1
+          else
+            echo "OK: doctor exited non-zero as expected"
+          fi
+
+      - name: stdio MCP handshake
+        run: |
+          uv run --with mcp python - <<'PY'
+          import anyio
+          from mcp import ClientSession, StdioServerParameters
+          from mcp.client.stdio import stdio_client
+
+          async def main():
+              params = StdioServerParameters(
+                  command="/tmp/abenbox/bin/ableton-mcp", args=["serve"]
+              )
+              async with stdio_client(params) as (r, w):
+                  async with ClientSession(r, w) as s:
+                      init = await s.initialize()
+                      assert init.serverInfo.name
+                      tools = await s.list_tools()
+                      names = {t.name for t in tools.tools}
+                      assert "get_session_info" in names and "set_tempo" in names
+                      print(f"stdio OK: {len(names)} tools")
+
+          anyio.run(main)
+          PY
+
+      - name: streamable-http handshake
+        run: |
+          /tmp/abenbox/bin/ableton-mcp serve --transport streamable-http --port 8799 &
+          SRV=$!
+          sleep 6
+          uv run --with httpx python - <<'PY'
+          import httpx
+          body = {"jsonrpc":"2.0","id":1,"method":"initialize","params":{
+              "protocolVersion":"2024-11-05","capabilities":{},
+              "clientInfo":{"name":"sandbox","version":"0"}}}
+          r = httpx.post("http://127.0.0.1:8799/mcp", json=body,
+                         headers={"Host":"127.0.0.1:8799",
+                                  "Accept":"application/json, text/event-stream"},
+                         timeout=20)
+          assert r.status_code in (200, 202), (r.status_code, r.text)
+          assert r.headers.get("mcp-session-id")
+          print("http OK:", r.status_code)
+          PY
+          kill $SRV

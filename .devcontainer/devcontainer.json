@@ -1,0 +1,16 @@
+{
+  "name": "ableton-mcp-anywhere",
+  "image": "mcr.microsoft.com/devcontainers/python:3.12",
+  "features": {
+    "ghcr.io/va-h/astral-uv/uv:1": {}
+  },
+  "postCreateCommand": "uv sync --extra dev && uv build",
+  "customizations": {
+    "codespaces": {
+      "openFiles": ["README.md"]
+    }
+  },
+  "remoteEnv": {
+    "NOTE": "This sandbox has no Ableton Live. Live-control tools need the desktop app + Remote Script; packaging, CLI, transports, and offline tooling are fully testable here."
+  }
+}
