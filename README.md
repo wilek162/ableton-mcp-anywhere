@@ -17,15 +17,28 @@ It wraps [`wstierhout/ableton-live-mcp`](https://github.com/wstierhout/ableton-l
 
 ## Install
 
-```bash
-uv tool install --from . ableton-mcp-anywhere
-```
-
-Or run it without installing:
+From PyPI (live once the first release is published — see *Releasing* below):
 
 ```bash
-uvx --from . ableton-anywhere <command>
+uv tool install ableton-mcp-anywhere
+ableton-anywhere --version
 ```
+
+One-shot, without installing:
+
+```bash
+uvx --from ableton-mcp-anywhere ableton-anywhere --help
+```
+
+From source (this repo):
+
+```bash
+uv tool install --from . '.[http]'   # [http] adds the server transports
+# or
+uvx --from . ableton-anywhere --help
+```
+
+On Windows you can also run `ableton-anywhere.cmd setup`.
 
 ## 60-second setup
 
@@ -152,6 +165,26 @@ the same clean-room checks automatically on every push — no Codespace needed.
 - **Port 9877 refused** — Live isn't running or the Control Surface isn't selected.
 - **Two bridges on one port** — don't enable two Ableton MCP Control Surfaces at once;
   run `setup --replace` if you're switching servers.
+
+## Releasing (maintainers)
+
+Publishing uses **PyPI Trusted Publishing** (OIDC) — no API token is stored in
+the repo. One-time setup, then every `v*` tag publishes automatically.
+
+1. Create a PyPI account and verify your email.
+2. On PyPI: **Publishing → Add a pending publisher** with
+   - PyPI project name: `ableton-mcp-anywhere`
+   - Owner: `wilek162`, Repository: `ableton-mcp-anywhere`
+   - Workflow name: `publish.yml`, Environment: `release`
+3. Cut a release:
+
+```bash
+git tag v1.0.1 && git push origin v1.0.1
+```
+
+The `Publish to PyPI` workflow builds the wheel/sdist and publishes them. Watch
+it under the repo's **Actions** tab. To sanity-check locally first:
+`uv build && uvx twine check dist/*`.
 
 ## Notes
 
