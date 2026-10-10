@@ -121,6 +121,26 @@ a network: the server has full control of your Live set and no authentication.
 | `schema [--format openai|anthropic|mcp]` | Export tool schemas |
 | `system-prompt` | Print a system prompt describing the tools |
 
+## GitHub Codespaces (optional sandbox)
+
+A Codespace is handy for testing packaging, the CLI, and the transports on a
+clean Linux machine — but it **cannot reach Ableton Live**, which only runs as a
+desktop app. Use it to develop and test; run `setup`/`doctor` against Live on
+your own machine.
+
+Codespaces need the `codespace` OAuth scope. If `gh codespace create` returns
+`403 Must have admin rights`, add the scope once, then create one:
+
+```bash
+gh auth refresh -h github.com -s codespace    # one-time, opens a browser
+gh codespace create -R <you>/ableton-mcp-anywhere --machine basicLinux32gb
+gh codespace ssh -c <name>                    # or open it in the browser
+```
+
+A ready-made `.devcontainer/devcontainer.json` installs `uv`, syncs deps, and
+builds the wheel on creation. The `Sandbox verify` GitHub Actions workflow runs
+the same clean-room checks automatically on every push — no Codespace needed.
+
 ## Troubleshooting
 
 - **User Library not found** — pass it explicitly: `ableton-anywhere setup --user-library "E:\Documents\ABLETON\User Library"`,
